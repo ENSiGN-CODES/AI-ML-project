@@ -99,5 +99,6 @@ if uploaded:
     st.info(f"Confidence: **{confidence*100:.2f}%**")
 
 st.markdown("---")
-st.write("Developed by Aanya Jain — AIML Project")
+st.write("Developed by Aanya Jain , Archit Pant and Kartikay Verma — AIML Project")
+
 
