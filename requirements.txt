@@ -8,5 +8,4 @@ pillow
 
 numpy
 
-OpenCV-python-headless
-
+OpenCV-python-headless==4.10.0.84
