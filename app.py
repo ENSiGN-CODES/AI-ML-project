@@ -6,24 +6,23 @@ import numpy as np
 import cv2
 from PIL import Image
 
-# -------------------------------
-# Model Architecture (MUST MATCH TRAINING)
-# -------------------------------
-class SimpleCNN(nn.Module):
+# -------------------------------------------------
+# 1️⃣ MODEL ARCHITECTURE (EXTRACTED FROM YOUR CODE)
+# -------------------------------------------------
+class CNN(nn.Module):
     def __init__(self, num_classes=3):
-        super().__init__()
-        self.features = nn.Sequential(
-            nn.Conv2d(1, 6, kernel_size=5),
+        super(CNN, self).__init__()
+        self.cnn_model = nn.Sequential(
+            nn.Conv2d(in_channels=1, out_channels=6, kernel_size=5),
             nn.Tanh(),
-            nn.AvgPool2d(kernel_size=2, stride=2),
-            nn.Conv2d(6, 16, kernel_size=5),
+            nn.AvgPool2d(kernel_size=2, stride=5),
+
+            nn.Conv2d(in_channels=6, out_channels=16, kernel_size=5),
             nn.Tanh(),
-            nn.AvgPool2d(kernel_size=2, stride=2),
-            nn.AdaptiveAvgPool2d((5, 5)),
+            nn.AvgPool2d(kernel_size=2, stride=5)
         )
-        self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(16 * 5 * 5, 120),
+        self.fc_model = nn.Sequential(
+            nn.Linear(6400, 120),
             nn.Tanh(),
             nn.Linear(120, 84),
             nn.Tanh(),
@@ -31,17 +30,18 @@ class SimpleCNN(nn.Module):
         )
 
     def forward(self, x):
-        x = self.features(x)
-        x = self.classifier(x)
+        x = self.cnn_model(x)
+        x = x.view(x.size(0), -1)
+        x = self.fc_model(x)
         return x  # logits
 
 
-# -------------------------------
-# Load Model
-# -------------------------------
+# -------------------------------------------------
+# 2️⃣ LOAD TRAINED MODEL
+# -------------------------------------------------
 @st.cache_resource
 def load_model():
-    model = SimpleCNN(num_classes=3)
+    model = CNN(num_classes=3)
     model.load_state_dict(torch.load("cnn_brain_tumor.pth", map_location="cpu"))
     model.eval()
     return model
@@ -50,34 +50,35 @@ model = load_model()
 
 CLASS_NAMES = ["Meningioma", "Glioma", "Pituitary"]
 
-# -------------------------------
-# Preprocess Function
-# -------------------------------
+
+# -------------------------------------------------
+# 3️⃣ IMAGE PREPROCESSING (EXTRACTED FROM YOUR CODE)
+# -------------------------------------------------
 def preprocess_image(img_pil):
-    """ Convert PIL image → model input tensor """
     img = np.array(img_pil.convert("L"))  # grayscale
-    
-    # Resize to match training
+
+    # Resize to training size
     img = cv2.resize(img, (512, 512))
 
     # Normalize
-    maxv = img.max() if img.max() > 0 else 1
-    img = img.astype(np.float32) / maxv
+    max_val = img.max() if img.max() > 0 else 1
+    img = img.astype(np.float32) / max_val
 
-    # Add channel dim → (1, 512, 512)
+    # Add channel (1,512,512)
     img = np.expand_dims(img, axis=0)
 
-    # Convert to torch tensor
-    img_t = torch.tensor(img, dtype=torch.float32).unsqueeze(0)  # (1,1,512,512)
+    # Convert to tensor
+    img_t = torch.tensor(img, dtype=torch.float32).unsqueeze(0)
     return img_t
 
 
-# -------------------------------
-# Streamlit UI
-# -------------------------------
+# -------------------------------------------------
+# 4️⃣ STREAMLIT UI
+# -------------------------------------------------
 st.set_page_config(page_title="Brain Tumor Classifier", layout="centered")
-st.title("🧠 Brain Tumor Classification from MRI")
-st.write("Upload an MRI scan below to classify the tumor type.")
+
+st.title("🧠 Brain Tumor MRI Classification")
+st.write("Upload a brain MRI image to detect tumor type.")
 
 uploaded = st.file_uploader("Upload MRI Image", type=["png", "jpg", "jpeg"])
 
@@ -90,11 +91,11 @@ if uploaded:
     with torch.no_grad():
         logits = model(tensor)
         probs = F.softmax(logits, dim=1).numpy()[0]
-        pred_class = np.argmax(probs)
-        confidence = probs[pred_class]
+        pred = np.argmax(probs)
+        confidence = probs[pred]
 
-    st.subheader("Prediction Result:")
-    st.success(f"Tumor Type: **{CLASS_NAMES[pred_class]}**")
+    st.subheader("Prediction Result")
+    st.success(f"Tumor Type: **{CLASS_NAMES[pred]}**")
     st.info(f"Confidence: **{confidence*100:.2f}%**")
 
 st.markdown("---")
