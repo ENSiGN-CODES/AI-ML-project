@@ -42,7 +42,7 @@ class CNN(nn.Module):
 @st.cache_resource
 def load_model():
     model = CNN(num_classes=3)
-    model.load_state_dict(torch.load("cnn_brain_tumor.pth", map_location="cpu"))
+    model.load_state_dict(torch.load("mri_cnn_3class.pth", map_location="cpu"))
     model.eval()
     return model
 
@@ -100,3 +100,4 @@ if uploaded:
 
 st.markdown("---")
 st.write("Developed by Aanya Jain — AIML Project")
+
